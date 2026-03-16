@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sports Dash - Live & H2H</title>
+    <title>SportsRC - Live Fixtures</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .active-tab { border-bottom: 3px solid #3b82f6; color: #3b82f6; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-[#0f172a] text-slate-200 min-h-screen">
@@ -18,221 +20,132 @@
                 <i data-lucide="activity" class="text-red-500 animate-pulse"></i>
                 <span class="text-xl font-bold tracking-tight">SPORT<span class="text-blue-500">SRC</span></span>
             </div>
-            <div class="text-xs bg-slate-800 px-3 py-1 rounded-full border border-slate-600 flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-ping"></div> Live Auto-Refresh
-            </div>
         </div>
     </nav>
 
-    <div class="bg-[#1e293b] shadow-md">
+    <div class="bg-[#1e293b] shadow-md mb-8">
         <div class="container mx-auto flex justify-center gap-8">
-            <button onclick="switchTab('fixtures')" id="tab-fixtures" class="py-4 px-2 font-medium active-tab transition-all">Fixtures</button>
-            <button onclick="switchTab('standings')" id="tab-standings" class="py-4 px-2 font-medium text-slate-400 hover:text-white transition-all">Standings</button>
-            <button onclick="switchTab('h2h')" id="tab-h2h" class="py-4 px-2 font-medium text-slate-400 hover:text-white transition-all">Head to Head</button>
+            <button class="py-4 px-2 font-medium active-tab transition-all">Fixtures</button>
+            <button class="py-4 px-2 font-medium text-slate-500 cursor-not-allowed" title="Butuh endpoint standings">Standings</button>
+            <button class="py-4 px-2 font-medium text-slate-500 cursor-not-allowed" title="Butuh endpoint h2h">Head to Head</button>
         </div>
     </div>
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 pb-12">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+            <i data-lucide="calendar"></i> Jadwal & Live Score
+        </h2>
         
-        <section id="content-fixtures" class="content-section">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                <i data-lucide="calendar"></i> Jadwal & Live Score
-            </h2>
-            <div id="list-fixtures" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                </div>
-        </section>
+        <div id="loading" class="text-center py-10 text-blue-400 animate-pulse">
+            Mengambil data dari server...
+        </div>
 
-        <section id="content-standings" class="content-section hidden">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                <i data-lucide="list-ordered"></i> Klasemen Liga Utama
-            </h2>
-            <div class="overflow-x-auto bg-[#1e293b] rounded-xl border border-slate-700">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-800 text-slate-400 text-sm uppercase">
-                        <tr>
-                            <th class="p-4">Pos</th>
-                            <th class="p-4">Tim</th>
-                            <th class="p-4 text-center">Main</th>
-                            <th class="p-4 text-center">Menang</th>
-                            <th class="p-4 text-center">Poin</th>
-                        </tr>
-                    </thead>
-                    <tbody id="list-standings"></tbody>
-                </table>
+        <div id="fixtures-container" class="space-y-8">
             </div>
-        </section>
-
-        <section id="content-h2h" class="content-section hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i data-lucide="swords"></i> Head to Head
-                </h2>
-                <button onclick="switchTab('fixtures')" class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white transition">
-                    &larr; Kembali ke Jadwal
-                </button>
-            </div>
-            
-            <div id="h2h-result" class="bg-slate-800 p-8 rounded-xl border border-slate-700 text-center">
-                <i data-lucide="mouse-pointer-click" class="mx-auto text-slate-500 mb-3 w-10 h-10"></i>
-                <p class="text-slate-400 text-lg">Klik salah satu pertandingan di menu <span class="text-white font-bold">Fixtures</span> untuk melihat riwayat pertemuan kedua tim.</p>
-            </div>
-        </section>
-
     </main>
 
     <script>
-        // --- KONFIGURASI API ---
-        const API_KEY = '2ae30aee0f4854af5cbfcd1d40ab7d83';
-        const BASE_URL = 'https://sportsrc.org/v2';
-        
-        // Atur parameter fetch sesuai dokumentasi API
-        const fetchOptions = {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${API_KEY}`, // Coba gunakan Bearer Token
-                'Content-Type': 'application/json'
-            }
-        };
-
-        // Inisialisasi Ikon
+        // Inisialisasi ikon
         lucide.createIcons();
 
-        // --- FUNGSI PINDAH TAB ---
-        function switchTab(tabName) {
-            document.querySelectorAll('.content-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`content-${tabName}`).classList.remove('hidden');
-            
-            document.querySelectorAll('button[id^="tab-"]').forEach(el => {
-                el.classList.remove('active-tab', 'text-white');
-                el.classList.add('text-slate-400');
-            });
-            document.getElementById(`tab-${tabName}`).classList.add('active-tab', 'text-white');
-            
-            if(tabName === 'standings') fetchStandings();
-            if(tabName === 'fixtures') fetchFixtures();
-        }
+        // URL ASLI DARI SCREENSHOT ANDA
+        const API_URL = "https://api.sportsrc.org/v2/?type=matches&api_key=2ae30aee0f4854af5cbfcd1d40ab7d83";
 
-        // --- FUNGSI FIXTURES & LIVE SCORE ---
         async function fetchFixtures() {
-            const container = document.getElementById('list-fixtures');
-            
-            try {
-                // Endpoint dummy/contoh. Sesuaikan dengan dokumentasi: misal /matches atau /livescore
-                const res = await fetch(`${BASE_URL}/fixtures`, fetchOptions);
-                const data = await res.json();
-                
-                let html = '';
-                // Asumsi data.data adalah array hasil
-                const matches = data.data || data; 
+            const container = document.getElementById('fixtures-container');
+            const loading = document.getElementById('loading');
 
-                matches.forEach(m => {
-                    // Fungsi onClick yang akan memanggil viewH2H()
-                    html += `
-                    <div onclick="viewH2H('${m.home_id}', '${m.away_id}', '${m.home_team}', '${m.away_team}')" 
-                         class="bg-[#1e293b] p-5 rounded-xl border border-slate-700 hover:border-blue-500 transition cursor-pointer shadow-lg group">
-                        <div class="flex justify-between text-[11px] text-blue-400 font-bold uppercase mb-3 tracking-widest">
-                            <span>${m.league_name || 'Liga'}</span>
-                            <span class="${m.status === 'LIVE' ? 'text-red-500 animate-pulse' : 'text-slate-500'}">
-                                ${m.status || 'FT'} ${m.minute ? m.minute + "'" : ''}
-                            </span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div class="w-2/5 text-center"><p class="font-bold">${m.home_team || 'Tim A'}</p></div>
-                            <div class="w-1/5 flex flex-col items-center">
-                                <span class="text-xl font-black text-white px-3 py-1 bg-slate-900 border border-slate-700 rounded-md">
-                                    ${m.home_score !== undefined ? m.home_score : '-'} : ${m.away_score !== undefined ? m.away_score : '-'}
-                                </span>
-                            </div>
-                            <div class="w-2/5 text-center"><p class="font-bold">${m.away_team || 'Tim B'}</p></div>
-                        </div>
-                        <div class="mt-4 text-center text-xs text-slate-500">Klik untuk lihat H2H</div>
-                    </div>`;
-                });
-                container.innerHTML = html;
-            } catch (e) {
-                // Tampilan error jika API gagal
-                container.innerHTML = `<div class="col-span-full p-4 bg-red-900/20 border border-red-500 rounded text-red-400">Gagal mengambil jadwal. Cek endpoint dan API Key Anda. Error: ${e.message}</div>`;
+            try {
+                // Fetch menggunakan metode GET biasa (tanpa header khusus untuk menghindari CORS)
+                const response = await fetch(API_URL);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    loading.style.display = 'none';
+                    renderData(result.data);
+                } else {
+                    throw new Error("Format data tidak sesuai atau gagal memuat.");
+                }
+
+            } catch (error) {
+                loading.innerHTML = `<span class="text-red-500">Error: Gagal memuat data. (${error.message})</span>`;
+                console.error("Fetch Error:", error);
             }
         }
 
-        // --- FUNGSI STANDINGS ---
-        async function fetchStandings() {
-            const tableBody = document.getElementById('list-standings');
-            tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center animate-pulse">Memuat klasemen...</td></tr>`;
+        function renderData(leaguesData) {
+            const container = document.getElementById('fixtures-container');
+            let html = '';
 
-            try {
-                const res = await fetch(`${BASE_URL}/standings?league_id=1`, fetchOptions);
-                const data = await res.json();
-                const teams = data.data || data;
-                
-                let html = '';
-                teams.forEach((team, index) => {
-                    html += `
-                    <tr class="border-b border-slate-800 hover:bg-slate-800/50 transition">
-                        <td class="p-4 font-bold ${index < 4 ? 'text-blue-400' : 'text-slate-500'}">${index + 1}</td>
-                        <td class="p-4 font-semibold">${team.team_name}</td>
-                        <td class="p-4 text-center">${team.played || 0}</td>
-                        <td class="p-4 text-center">${team.win || 0}</td>
-                        <td class="p-4 text-center font-bold text-white text-lg">${team.points || 0}</td>
-                    </tr>`;
-                });
-                tableBody.innerHTML = html;
-            } catch (e) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Gagal memuat klasemen.</td></tr>`;
-            }
-        }
+            // Looping setiap Liga
+            leaguesData.forEach(leagueObj => {
+                const league = leagueObj.league;
+                const matches = leagueObj.matches;
 
-        // --- FUNGSI HEAD TO HEAD (H2H) ---
-        async function viewH2H(homeId, awayId, homeName, awayName) {
-            // Pindah ke tab H2H
-            switchTab('h2h');
-            
-            const container = document.getElementById('h2h-result');
-            container.innerHTML = `<p class="animate-pulse text-blue-400">Mencari riwayat pertemuan ${homeName} vs ${awayName}...</p>`;
-
-            try {
-                // Ganti dengan endpoint H2H yang benar dari dokumentasi SportSRC
-                const url = `${BASE_URL}/h2h?team1=${homeId}&team2=${awayId}`;
-                const res = await fetch(url, fetchOptions);
-                const data = await res.json();
-                const h2hMatches = data.data || data;
-
-                let html = `
-                    <h3 class="text-xl font-bold mb-4 text-yellow-400">${homeName} vs ${awayName}</h3>
-                    <div class="space-y-3">
+                // Header Liga (Nama & Logo Liga)
+                html += `
+                <div class="bg-[#1e293b] rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+                    <div class="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center gap-3">
+                        <img src="${league.logo}" alt="${league.name}" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/24'">
+                        <h3 class="font-bold text-white tracking-wide">${league.name} <span class="text-slate-500 text-sm font-normal">(${league.country})</span></h3>
+                    </div>
+                    <div class="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 `;
 
-                if(h2hMatches.length === 0) {
-                    html += `<p class="text-slate-400">Belum ada riwayat pertemuan sebelumnya.</p>`;
-                } else {
-                    h2hMatches.forEach(match => {
-                        html += `
-                        <div class="bg-[#1e293b] p-3 rounded flex justify-between items-center border border-slate-700 text-sm">
-                            <span class="text-slate-400 w-1/4 text-left">${new Date(match.date).getFullYear() || '-'}</span>
-                            <span class="w-1/4 text-right ${match.home_score > match.away_score ? 'font-bold text-white' : 'text-slate-400'}">${match.home_team}</span>
-                            <span class="w-1/4 font-black text-center text-blue-400">${match.home_score} - ${match.away_score}</span>
-                            <span class="w-1/4 text-left ${match.away_score > match.home_score ? 'font-bold text-white' : 'text-slate-400'}">${match.away_team}</span>
-                        </div>`;
+                // Looping setiap pertandingan di dalam liga tersebut
+                matches.forEach(match => {
+                    const home = match.teams.home;
+                    const away = match.teams.away;
+                    const status = match.status_detail; // "Ended", "Not started", dll
+                    const isLive = match.status === "inprogress"; // Asumsi jika ada status inprogress
+                    
+                    // Format waktu dari Timestamp (Epoch ms) ke Waktu Lokal
+                    const matchTime = new Date(match.timestamp).toLocaleTimeString('id-ID', {
+                        hour: '2-digit', minute: '2-digit'
                     });
-                }
-                html += `</div>`;
-                container.innerHTML = html;
 
-            } catch (e) {
-                container.innerHTML = `<p class="text-red-500">Gagal mengambil data H2H. (Endpoint mungkin berbeda).</p>`;
-            }
+                    // Skor (menangani null jika belum mulai)
+                    const scoreDisplay = match.score.display || "VS";
+                    const scoreClass = scoreDisplay === "VS" ? "bg-slate-700 text-sm" : "bg-blue-600 text-lg font-black";
+
+                    html += `
+                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 hover:border-blue-500 transition">
+                            <div class="text-center text-xs font-semibold mb-3 ${isLive ? 'text-red-500 animate-pulse' : 'text-slate-400'}">
+                                ${status} • ${matchTime}
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="flex flex-col items-center w-2/5 text-center gap-2">
+                                    <img src="${home.badge}" class="w-10 h-10 object-contain" alt="${home.name}" onerror="this.src='https://via.placeholder.com/40'">
+                                    <span class="text-sm font-bold truncate w-full" title="${home.name}">${home.name}</span>
+                                </div>
+
+                                <div class="w-1/5 flex justify-center">
+                                    <div class="px-3 py-1 rounded text-white ${scoreClass} whitespace-nowrap">
+                                        ${scoreDisplay}
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col items-center w-2/5 text-center gap-2">
+                                    <img src="${away.badge}" class="w-10 h-10 object-contain" alt="${away.name}" onerror="this.src='https://via.placeholder.com/40'">
+                                    <span class="text-sm font-bold truncate w-full" title="${away.name}">${away.name}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`; // Tutup grid & container liga
+            });
+
+            container.innerHTML = html;
         }
 
-        // --- INISIALISASI ---
+        // Jalankan fetch saat halaman dibuka
         fetchFixtures();
 
-        // Auto-refresh jadwal & score setiap 60 detik (60000 ms)
-        setInterval(() => {
-            // Hanya refresh jika sedang berada di tab fixtures
-            if(document.getElementById('content-fixtures').classList.contains('hidden') === false) {
-                fetchFixtures();
-            }
-        }, 60000); 
+        // Auto Refresh tiap 1 menit
+        setInterval(fetchFixtures, 60000);
 
     </script>
 </body>

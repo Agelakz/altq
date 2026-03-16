@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportSRC API JSON Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Agar format JSON rapi saat dicetak */
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-gray-200 p-8 font-sans min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-blue-400">⚡ SportSRC API JSON Tester</h1>
+        
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-6 shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-400 mb-1">Parameter: type=</label>
+                    <input type="text" id="inputType" value="standings" 
+                           class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none" 
+                           placeholder="Contoh: standings, h2h, events">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-gray-400 mb-1">Parameter Tambahan (Opsional):</label>
+                    <input type="text" id="inputExtra" value="&league_id=47" 
+                           class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-yellow-400 focus:border-blue-500 outline-none font-mono text-sm" 
+                           placeholder="Contoh: &league_id=47 atau &match_id=123">
+                </div>
+            </div>
+
+            <button onclick="testAPI()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition w-full md:w-auto">
+                Kirim Request & Lihat JSON
+            </button>
+        </div>
+
+        <div class="mb-2 text-sm text-gray-500">
+            URL Target: <span id="urlTarget" class="text-blue-300 font-mono break-all">-</span>
+        </div>
+
+        <div class="bg-[#0B1218] rounded-xl border border-slate-700 overflow-hidden relative">
+            <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 text-xs font-bold text-gray-400 uppercase flex justify-between">
+                <span>Response JSON</span>
+            </div>
+            <div class="p-4 overflow-auto max-h-[500px]">
+                <pre id="jsonOutput" class="text-green-400 font-mono text-sm">Menunggu instruksi...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = "2ae30aee0f4854af5cbfcd1d40ab7d83";
+        const BASE_URL = "https://api.sportsrc.org/v2/";
+
+        async function testAPI() {
+            const typeValue = document.getElementById('inputType').value.trim();
+            const extraValue = document.getElementById('inputExtra').value.trim();
+            const jsonOutput = document.getElementById('jsonOutput');
+            const urlTarget = document.getElementById('urlTarget');
+
+            // Susun URL
+            const url = `${BASE_URL}?type=${typeValue}${extraValue}&api_key=${API_KEY}`;
+            urlTarget.innerText = url;
+            
+            jsonOutput.className = "text-yellow-400 font-mono text-sm";
+            jsonOutput.innerText = "Mengambil data dari server SportSRC...\nMohon tunggu.";
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Cetak hasil JSON dengan format rapi (indentasi 4 spasi)
+                jsonOutput.className = "text-green-400 font-mono text-sm";
+                jsonOutput.innerText = JSON.stringify(data, null, 4);
+                
+            } catch (error) {
+                jsonOutput.className = "text-red-500 font-mono text-sm";
+                jsonOutput.innerText = `ERROR GAGAL FETCH:\n\n${error.message}\n\nKemungkinan URL salah atau parameter wajib tidak disertakan.`;
+            }
+        }
+    </script>
+</body>
+</html>

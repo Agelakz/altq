@@ -3,319 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SportsRC - Match Center</title>
+    <title>Scorehub - Match Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0B1218; }
         ::-webkit-scrollbar-thumb { background: #2A3540; border-radius: 4px; }
-        
-        /* Animasi Modal */
-        .modal-enter { animation: slideIn 0.3s ease-out forwards; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
-<body class="bg-[#0B1218] text-gray-300 h-screen flex overflow-hidden relative">
+<body class="bg-[#0B1218] text-gray-300 h-screen flex overflow-hidden">
 
     <aside class="w-64 bg-[#0B1218] border-r border-[#1E293B] hidden md:flex flex-col z-10">
         <div class="p-4 border-b border-[#1E293B] flex items-center gap-2">
             <i data-lucide="activity" class="text-red-500"></i>
-            <span class="text-xl font-bold text-white tracking-tight">SPORT<span class="text-blue-500">SRC</span></span>
+            <span class="text-xl font-bold text-white tracking-tight">SCORE<span class="text-blue-500">HUB</span></span>
         </div>
         <div class="flex-1 overflow-y-auto p-4">
             <h3 class="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2">
                 <i data-lucide="pin" class="w-3 h-3"></i> PINNED LEAGUES
             </h3>
             <ul class="space-y-1">
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://placehold.co/16x16/1A242D/475569" class="w-4 h-4 rounded-full"> Premier League</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><i data-lucide="trophy" class="w-4 h-4 text-gray-400"></i> Premier League</a></li>
             </ul>
         </div>
     </aside>
 
-    <main id="main-view" class="flex-1 flex flex-col h-full overflow-hidden w-full">
-        <header class="bg-[#111820] border-b border-[#1E293B]">
+    <main class="flex-1 flex flex-col h-full overflow-hidden w-full">
+        <header class="bg-[#111820] border-b border-[#1E293B] flex justify-between items-center pr-4">
             <nav class="flex overflow-x-auto no-scrollbar">
                 <button class="px-6 py-4 flex items-center gap-2 font-bold text-white border-b-2 border-red-500 bg-[#1A242D]">
                     <i data-lucide="dribbble" class="w-5 h-5"></i> FOOTBALL
                 </button>
             </nav>
+            <div id="cache-status" class="text-xs font-mono text-gray-500 flex items-center gap-2">
+                </div>
         </header>
 
         <div class="bg-[#0B1218] p-4 flex gap-2 border-b border-[#1E293B] overflow-x-auto">
-            <button onclick="applyFilter('ALL')" id="filter-ALL" class="filter-btn px-4 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold transition">ALL</button>
-            <button onclick="applyFilter('LIVE')" id="filter-LIVE" class="filter-btn px-4 py-1.5 rounded-full bg-transparent border border-[#1E293B] text-gray-400 text-xs font-bold hover:text-white transition">LIVE</button>
-            <button onclick="applyFilter('FINISHED')" id="filter-FINISHED" class="filter-btn px-4 py-1.5 rounded-full bg-transparent border border-[#1E293B] text-gray-400 text-xs font-bold hover:text-white transition">FINISHED</button>
-            <button onclick="applyFilter('SCHEDULED')" id="filter-SCHEDULED" class="filter-btn px-4 py-1.5 rounded-full bg-transparent border border-[#1E293B] text-gray-400 text-xs font-bold hover:text-white transition">SCHEDULED</button>
+            <button class="filter-btn px-4 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold">ALL</button>
+            <div class="ml-auto flex items-center text-xs font-medium text-gray-400 bg-[#111820] px-3 rounded border border-[#1E293B]">
+                <i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Hari Ini
+            </div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-2 md:p-4 bg-[#0B1218]">
-            <div id="loading" class="text-center py-10 text-gray-500">Memuat data dari server...</div>
+            <div id="loading" class="text-center py-10 text-gray-500 flex flex-col items-center">
+                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3"></i>
+                <span>Menghubungkan ke RapidAPI...</span>
+            </div>
+            
+            <div id="debug-container" class="hidden max-w-4xl mx-auto bg-slate-900 border border-slate-700 p-4 rounded-lg overflow-x-auto text-xs font-mono text-green-400"></div>
+
             <div id="matches-container" class="max-w-4xl mx-auto space-y-4 pb-10"></div>
         </div>
     </main>
 
-    <div id="match-detail-view" class="absolute inset-0 bg-[#0B1218] z-50 hidden flex-col modal-enter overflow-y-auto">
-        
-        <div class="p-4 border-b border-[#1E293B] flex items-center justify-between bg-[#0B1218] sticky top-0 z-20">
-            <div class="flex items-center gap-2 text-xs font-bold text-gray-400 tracking-wider">
-                <i data-lucide="dribbble" class="w-4 h-4 text-white"></i> 
-                <span>FOOTBALL</span> <i data-lucide="chevron-right" class="w-3 h-3"></i> 
-                <span id="detail-league-name" class="text-white uppercase">LEAGUE NAME</span>
-            </div>
-            <button onclick="closeMatchDetail()" class="text-gray-400 hover:text-white flex items-center gap-1 text-sm bg-[#1A242D] px-3 py-1 rounded">
-                <i data-lucide="x" class="w-4 h-4"></i> Tutup
-            </button>
-        </div>
-
-        <div class="max-w-4xl mx-auto w-full p-6 mt-4">
-            <div class="flex justify-between items-center bg-[#111820] p-8 rounded-2xl border border-[#1E293B] shadow-2xl relative overflow-hidden">
-                <i data-lucide="star" class="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-600 hover:text-yellow-500 cursor-pointer"></i>
-                
-                <div class="flex flex-col items-center gap-4 w-1/3">
-                    <div class="w-24 h-24 bg-white rounded-2xl p-2 flex items-center justify-center shadow-lg">
-                        <img id="detail-home-logo" src="" class="max-w-full max-h-full object-contain">
-                    </div>
-                    <h2 id="detail-home-name" class="text-xl font-bold text-white text-center">Home</h2>
-                </div>
-
-                <div class="flex flex-col items-center w-1/3">
-                    <span id="detail-date" class="text-xs font-medium text-gray-400 mb-2">Tanggal</span>
-                    <div class="flex items-center gap-4">
-                        <span id="detail-home-score" class="text-5xl font-black text-white">0</span>
-                        <span class="text-3xl font-light text-gray-600">-</span>
-                        <span id="detail-away-score" class="text-5xl font-black text-white">0</span>
-                    </div>
-                    <span id="detail-status" class="mt-3 text-sm font-bold tracking-widest text-red-500 uppercase">FINISHED</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-4 w-1/3">
-                    <div class="w-24 h-24 bg-white rounded-2xl p-2 flex items-center justify-center shadow-lg">
-                        <img id="detail-away-logo" src="" class="max-w-full max-h-full object-contain">
-                    </div>
-                    <h2 id="detail-away-name" class="text-xl font-bold text-white text-center">Away</h2>
-                </div>
-                
-                <i data-lucide="star" class="absolute right-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-600 hover:text-yellow-500 cursor-pointer"></i>
-            </div>
-
-            <div class="flex gap-6 mt-8 border-b border-[#1E293B]">
-                <button class="pb-3 text-sm font-bold text-red-500 border-b-2 border-red-500 uppercase">Match</button>
-                <button class="pb-3 text-sm font-bold text-gray-500 hover:text-white uppercase transition">H2H</button>
-                <button class="pb-3 text-sm font-bold text-gray-500 hover:text-white uppercase transition">Standings</button>
-            </div>
-
-            <div class="mt-6 bg-[#111820] rounded-xl border border-[#1E293B] overflow-hidden">
-                <div class="bg-[#1A242D] px-4 py-2 text-xs font-bold text-gray-400 flex justify-between">
-                    <span>1ST HALF</span>
-                    <span id="detail-ht-score" class="text-white">0 - 0</span>
-                </div>
-                
-                <div class="px-6 py-3 border-b border-[#1A242D] flex items-center gap-4">
-                    <span class="text-xs font-bold w-6">18'</span>
-                    <i data-lucide="goal" class="w-4 h-4 text-white"></i>
-                    <span class="text-sm font-bold text-white w-12 text-center">1 - 0</span>
-                    <span class="text-sm text-gray-200">Pemain Contoh (Home)</span>
-                </div>
-
-                <div class="bg-[#1A242D] px-4 py-2 text-xs font-bold text-gray-400 flex justify-between mt-2">
-                    <span>2ND HALF</span>
-                    <span id="detail-ft-score" class="text-white">0 - 0</span>
-                </div>
-
-                <div class="px-6 py-3 flex items-center justify-end gap-4 bg-[#111820]">
-                    <span class="text-sm text-gray-200">Pemain Contoh (Away)</span>
-                    <div class="w-3 h-4 bg-yellow-400 rounded-sm"></div>
-                    <span class="text-xs font-bold w-6 text-right">48'</span>
-                </div>
-                
-                <div class="p-4 bg-blue-900/20 text-blue-400 text-xs text-center border-t border-[#1E293B]">
-                    Catatan: Fitur pencetak gol dan kartu memerlukan endpoint API events dari SportSRC.
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
         lucide.createIcons();
 
-        const today = new Date().toISOString().split('T')[0];
-        const API_URL = `https://api.sportsrc.org/v2/?type=matches&sport=football&date=${today}&api_key=2ae30aee0f4854af5cbfcd1d40ab7d83`;
+        // KONFIGURASI RAPIDAPI
+        const API_HOST = 'scorehub-football-live-scores-api.p.rapidapi.com';
+        const API_KEY = 'aa90a97566msh0596dc8fd7c0d9ep13f42bjsna912b1c6ca9d';
+        
+        // KONFIGURASI CACHE (30 Menit)
+        const CACHE_DURATION_MS = 30 * 60 * 1000; 
 
-        let allMatchesData = []; // Menyimpan data murni dari API
-        let currentFilter = 'ALL';
-        let matchDictionary = {}; // Menyimpan detail match by ID
+        // Fungsi Inti: Fetch dengan Cache localStorage
+        async function fetchWithCache(endpoint, cacheKey) {
+            const url = `https://${API_HOST}/v1/${endpoint}`;
+            const cachedData = localStorage.getItem(cacheKey);
+            const cacheStatusEl = document.getElementById('cache-status');
 
-        async function fetchFixtures() {
+            if (cachedData) {
+                const parsedData = JSON.parse(cachedData);
+                const timePassed = new Date().getTime() - parsedData.timestamp;
+
+                // Jika umur cache masih di bawah 30 menit (CACHE_DURATION_MS)
+                if (timePassed < CACHE_DURATION_MS) {
+                    const minutesLeft = Math.ceil((CACHE_DURATION_MS - timePassed) / 60000);
+                    cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Cached (Reset dalam ${minutesLeft}m)`;
+                    console.log(`[CACHE HIT] Mengambil dari penyimpanan lokal: ${cacheKey}`);
+                    return parsedData.data; // Kembalikan data dari cache
+                }
+            }
+
+            // Jika tidak ada cache, atau cache sudah kedaluwarsa, ambil dari API
+            cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-500 animate-ping"></span> Fetching API...`;
+            console.log(`[API FETCH] Meminta data baru dari RapidAPI: ${endpoint}`);
+
             try {
-                const response = await fetch(API_URL);
-                const result = await response.json();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-rapidapi-host': API_HOST,
+                        'x-rapidapi-key': API_KEY
+                    }
+                });
 
-                if (result.success && result.data) {
-                    allMatchesData = result.data;
-                    
-                    // Simpan setiap match ke dictionary agar mudah dicari saat di-klik
-                    allMatchesData.forEach(league => {
-                        league.matches.forEach(m => {
-                            m.league_name = league.league.name; // Simpan nama liga di objek match
-                            m.league_country = league.league.country;
-                            matchDictionary[m.id] = m; 
-                        });
-                    });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
 
-                    document.getElementById('loading').style.display = 'none';
-                    applyFilter('ALL'); // Render awal semua data
-                }
+                // Simpan hasil fetch ke localStorage beserta waktu (timestamp) saat ini
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    timestamp: new Date().getTime(),
+                    data: data
+                }));
+
+                cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Cache Updated`;
+                return data;
+
             } catch (error) {
-                document.getElementById('loading').innerHTML = `<div class="text-red-500">Gagal memuat jadwal.</div>`;
+                cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> API Error`;
+                console.error("Gagal mengambil data dari API:", error);
+                throw error;
             }
         }
 
-        // --- FUNGSI FILTERING ---
-        function applyFilter(filterType) {
-            currentFilter = filterType;
-            
-            // Ubah gaya tombol filter aktif
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('bg-red-600', 'text-white');
-                btn.classList.add('bg-transparent', 'text-gray-400');
-            });
-            const activeBtn = document.getElementById(`filter-${filterType}`);
-            activeBtn.classList.remove('bg-transparent', 'text-gray-400');
-            activeBtn.classList.add('bg-red-600', 'text-white');
+        // FUNGSI UTAMA UNTUK MENGAMBIL JADWAL
+        async function initDashboard() {
+            try {
+                // Memanggil endpoint fixtures dengan cache key 'cache_fixtures_today'
+                const fixturesData = await fetchWithCache('fixtures.php', 'cache_fixtures_today');
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // MENGANALISIS STRUKTUR DATA (Karena API ganti)
+                const debugContainer = document.getElementById('debug-container');
+                debugContainer.classList.remove('hidden');
+                
+                // Menampilkan sedikit cuplikan JSON mentah agar kita tahu cara merendernya
+                debugContainer.innerText = "// STRUKTUR JSON SCOREHUB API (Contoh 1 Item):\n\n" + 
+                                          JSON.stringify(fixturesData[0] || fixturesData.data?.[0] || fixturesData, null, 2);
+                
+                document.getElementById('matches-container').innerHTML = `
+                    <div class="p-6 bg-blue-900/20 border border-blue-500 rounded-lg text-blue-200">
+                        <h3 class="font-bold text-lg mb-2">Berhasil Terhubung! 🚀</h3>
+                        <p class="text-sm mb-4">Sistem Cache 30 Menit sudah aktif. Kuota Anda aman meski di-refresh berkali-kali.</p>
+                        <p class="text-sm">Lihat kotak struktur JSON di atas. Karena kita berganti dari SportSRC ke Scorehub, nama variabel (seperti homeTeam, leagueName, skor, dll) di dalam JSON pasti berbeda.</p>
+                    </div>`;
 
-            // Proses Penyaringan
-            let filteredData = [];
-            
-            allMatchesData.forEach(leagueObj => {
-                // Filter matches di dalam liga ini
-                let validMatches = leagueObj.matches.filter(match => {
-                    if (filterType === 'ALL') return true;
-                    if (filterType === 'LIVE') return match.status === 'inprogress';
-                    if (filterType === 'FINISHED') return match.status === 'finished';
-                    if (filterType === 'SCHEDULED') return match.status === 'notstarted';
-                    return true;
-                });
-
-                // Jika ada pertandingan yang lolos filter, masukkan ke hasil render
-                if (validMatches.length > 0) {
-                    filteredData.push({
-                        league: leagueObj.league,
-                        matches: validMatches
-                    });
-                }
-            });
-
-            renderData(filteredData);
-        }
-
-        // --- FUNGSI RENDER LIST (HALAMAN DEPAN) ---
-        function renderData(leaguesData) {
-            const container = document.getElementById('matches-container');
-            if (leaguesData.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada pertandingan untuk filter ini.</div>`;
-                return;
+            } catch (error) {
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-red-500 py-4 bg-red-900/20 border border-red-500 rounded text-center w-full">
+                        Gagal memuat jadwal. Pastikan API Key RapidAPI Anda benar.<br>
+                        Error: ${error.message}
+                    </div>`;
             }
-
-            let html = '';
-            leaguesData.forEach(leagueObj => {
-                const league = leagueObj.league;
-                html += `
-                <div class="rounded-lg overflow-hidden border border-[#1E293B]">
-                    <div class="bg-[#1A242D] px-4 py-2.5 flex items-center gap-3">
-                        <img src="${league.flag || league.logo}" class="w-5 h-5 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/20/1A242D/475569';">
-                        <span class="text-xs font-bold text-white uppercase">${league.country}: <span class="text-gray-300">${league.name}</span></span>
-                    </div>
-                    <div class="bg-[#111820]">
-                `;
-
-                leagueObj.matches.forEach(match => {
-                    const home = match.teams.home;
-                    const away = match.teams.away;
-                    const scoreHome = match.score?.current?.home !== undefined ? match.score.current.home : '-';
-                    const scoreAway = match.score?.current?.away !== undefined ? match.score.current.away : '-';
-                    const timeClass = match.status === 'inprogress' ? 'text-red-500 animate-pulse font-bold' : 'text-gray-500';
-
-                    // Tambahkan fungsi onClick dengan melempar ID Match
-                    html += `
-                        <div onclick="openMatchDetail('${match.id}')" class="flex px-4 py-2 border-b border-[#1A242D] hover:bg-[#1A242D]/70 transition cursor-pointer">
-                            <div class="w-20 flex items-center text-xs ${timeClass}">${match.status_detail}</div>
-                            <div class="flex-1 flex flex-col gap-1.5 pl-4 border-l border-[#1A242D]">
-                                <div class="flex justify-between items-center">
-                                    <div class="flex items-center gap-2">
-                                        <img src="${home.badge}" class="w-4 h-4" onerror="this.onerror=null; this.src='https://placehold.co/16/1A242D/475569';">
-                                        <span class="text-sm text-gray-200">${home.name}</span>
-                                    </div>
-                                    <span class="text-sm font-bold text-white">${scoreHome}</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <div class="flex items-center gap-2">
-                                        <img src="${away.badge}" class="w-4 h-4" onerror="this.onerror=null; this.src='https://placehold.co/16/1A242D/475569';">
-                                        <span class="text-sm text-gray-200">${away.name}</span>
-                                    </div>
-                                    <span class="text-sm font-bold text-white">${scoreAway}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += `</div></div>`;
-            });
-            container.innerHTML = html;
-            lucide.createIcons();
         }
 
-        // --- FUNGSI MEMBUKA MATCH DETAIL ---
-        function openMatchDetail(matchId) {
-            const match = matchDictionary[matchId];
-            if(!match) return;
+        // Jalankan saat aplikasi dibuka
+        initDashboard();
 
-            // Isi Data ke Elemen HTML Detail
-            document.getElementById('detail-league-name').innerText = `${match.league_country} - ${match.league_name}`;
-            
-            // Info Tim Home
-            document.getElementById('detail-home-name').innerText = match.teams.home.name;
-            document.getElementById('detail-home-logo').src = match.teams.home.badge;
-            document.getElementById('detail-home-logo').onerror = function() { this.src='https://placehold.co/100/FFF/000?text=' + match.teams.home.name[0]; };
-            
-            // Info Tim Away
-            document.getElementById('detail-away-name').innerText = match.teams.away.name;
-            document.getElementById('detail-away-logo').src = match.teams.away.badge;
-            document.getElementById('detail-away-logo').onerror = function() { this.src='https://placehold.co/100/FFF/000?text=' + match.teams.away.name[0]; };
-
-            // Skor Utama & Status
-            document.getElementById('detail-home-score').innerText = match.score?.current?.home !== undefined ? match.score.current.home : '-';
-            document.getElementById('detail-away-score').innerText = match.score?.current?.away !== undefined ? match.score.current.away : '-';
-            
-            const statusEl = document.getElementById('detail-status');
-            statusEl.innerText = match.status_detail;
-            statusEl.className = match.status === 'inprogress' ? "mt-3 text-sm font-bold tracking-widest text-red-500 uppercase animate-pulse" : "mt-3 text-sm font-bold tracking-widest text-gray-400 uppercase";
-
-            // Waktu & Tanggal
-            document.getElementById('detail-date').innerText = new Date(match.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-
-            // Half Time Score (Babak 1 & 2)
-            const htScore = match.score?.period_1 ? `${match.score.period_1}` : '-';
-            const ftScore = match.score?.period_2 ? `${match.score.period_2}` : '-';
-            document.getElementById('detail-ht-score').innerText = htScore;
-            document.getElementById('detail-ft-score').innerText = ftScore;
-
-            // Tampilkan Modal
-            document.getElementById('match-detail-view').classList.remove('hidden');
-            document.getElementById('match-detail-view').classList.add('flex');
-        }
-
-        // --- FUNGSI MENUTUP MATCH DETAIL ---
-        function closeMatchDetail() {
-            document.getElementById('match-detail-view').classList.add('hidden');
-            document.getElementById('match-detail-view').classList.remove('flex');
-        }
-
-        // Jalankan fetch saat halaman dibuka
-        fetchFixtures();
     </script>
 </body>
 </html>

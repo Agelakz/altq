@@ -30,11 +30,11 @@
                 <i data-lucide="pin" class="w-3 h-3"></i> PINNED LEAGUES
             </h3>
             <ul class="space-y-1">
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjEwNzQ6YTZmNzNhMTQ5ODAy.png" class="w-4 h-4"> Premier League</a></li>
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjExNjIwOmQ3NmVjMGUyN2M3MA.png" class="w-4 h-4"> LaLiga</a></li>
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/dGVhbToxMzE2OjA4OWJmM2MyODZlYQ.png" class="w-4 h-4"> Serie A</a></li>
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjE1NjM6MmU5OWM1YTI3ZjNi.png" class="w-4 h-4"> Bundesliga</a></li>
-                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjQ0NDpmMTA0M2ZkYWViNjQy.png" class="w-4 h-4"> Ligue 1</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjEwNzQ6YTZmNzNhMTQ5ODAy.png" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';"> Premier League</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjExNjIwOmQ3NmVjMGUyN2M3MA.png" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';"> LaLiga</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/dGVhbToxMzE2OjA4OWJmM2MyODZlYQ.png" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';"> Serie A</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjE1NjM6MmU5OWM1YTI3ZjNi.png" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';"> Bundesliga</a></li>
+                <li><a href="#" class="flex items-center gap-3 px-2 py-1.5 hover:bg-[#1A242D] rounded text-sm text-gray-200"><img src="https://img.sportsrc.org/file/bGvHZ3VlOjQ0NDpmMTA0M2ZkYWViNjQy.png" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';"> Ligue 1</a></li>
             </ul>
         </div>
     </aside>
@@ -78,13 +78,9 @@
     </main>
 
     <script>
-        // Inisialisasi ikon
         lucide.createIcons();
 
-        // Mengambil tanggal hari ini (Format YYYY-MM-DD)
         const today = new Date().toISOString().split('T')[0];
-        
-        // URL API Anda dengan filter hari ini
         const API_URL = `https://api.sportsrc.org/v2/?type=matches&sport=football&date=${today}&api_key=2ae30aee0f4854af5cbfcd1d40ab7d83`;
 
         async function fetchFixtures() {
@@ -103,7 +99,7 @@
                 }
 
             } catch (error) {
-                loading.innerHTML = `<div class="text-red-500 py-4 bg-red-900/10 rounded-lg">Gagal memuat jadwal. ${error.message}</div>`;
+                loading.innerHTML = `<div class="text-red-500 py-4 bg-red-900/10 rounded-lg text-center">Gagal memuat jadwal. ${error.message}</div>`;
             }
         }
 
@@ -111,18 +107,16 @@
             const container = document.getElementById('matches-container');
             let html = '';
 
-            // Looping berdasarkan Liga
             leaguesData.forEach(leagueObj => {
                 const league = leagueObj.league;
                 const matches = leagueObj.matches;
 
-                // --- HEADER LIGA ---
                 html += `
                 <div class="rounded-lg overflow-hidden border border-[#1E293B]">
                     <div class="bg-[#1A242D] px-4 py-2.5 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <i data-lucide="star" class="w-4 h-4 text-gray-500 hover:text-yellow-500 cursor-pointer transition"></i>
-                            <img src="${league.flag || league.logo}" alt="${league.name}" class="w-5 h-5 object-contain" onerror="this.src='https://via.placeholder.com/20'">
+                            <img src="${league.flag || league.logo}" alt="${league.name}" class="w-5 h-5 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/20x20/1A242D/475569?text=?';">
                             <span class="text-xs font-bold text-white uppercase tracking-wider">${league.country}: <span class="text-gray-300 font-semibold">${league.name}</span></span>
                             <i data-lucide="pin" class="w-3.5 h-3.5 text-blue-500 ml-1 hidden md:block"></i>
                         </div>
@@ -134,17 +128,14 @@
                     <div class="bg-[#111820]">
                 `;
 
-                // --- LOOPING PERTANDINGAN ---
                 matches.forEach(match => {
                     const home = match.teams.home;
                     const away = match.teams.away;
                     const status = match.status_detail;
                     
-                    // Mengambil skor jika ada
                     const scoreHome = match.score?.current?.home !== undefined ? match.score.current.home : '-';
                     const scoreAway = match.score?.current?.away !== undefined ? match.score.current.away : '-';
                     
-                    // Menentukan apakah pertandingan sedang live
                     const isLive = match.status === 'inprogress';
                     const timeClass = isLive ? 'text-red-500 animate-pulse font-bold' : 'text-gray-500';
 
@@ -161,7 +152,7 @@
                             <div class="flex-1 flex flex-col gap-1.5 border-l border-[#1A242D] pl-4">
                                 <div class="flex justify-between items-center">
                                     <div class="flex items-center gap-2">
-                                        <img src="${home.badge}" class="w-4 h-4 object-contain" onerror="this.src='https://via.placeholder.com/16'">
+                                        <img src="${home.badge}" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';">
                                         <span class="text-sm text-gray-200 ${scoreHome > scoreAway ? 'font-bold text-white' : ''}">${home.name}</span>
                                     </div>
                                     <span class="text-sm font-bold text-white w-6 text-center">${scoreHome}</span>
@@ -169,7 +160,7 @@
                                 
                                 <div class="flex justify-between items-center">
                                     <div class="flex items-center gap-2">
-                                        <img src="${away.badge}" class="w-4 h-4 object-contain" onerror="this.src='https://via.placeholder.com/16'">
+                                        <img src="${away.badge}" class="w-4 h-4 object-contain" onerror="this.onerror=null; this.src='https://placehold.co/16x16/1A242D/475569?text=?';">
                                         <span class="text-sm text-gray-200 ${scoreAway > scoreHome ? 'font-bold text-white' : ''}">${away.name}</span>
                                     </div>
                                     <span class="text-sm font-bold text-white w-6 text-center">${scoreAway}</span>
@@ -179,12 +170,10 @@
                     `;
                 });
 
-                html += `</div></div>`; // Tutup wadah liga
+                html += `</div></div>`;
             });
 
             container.innerHTML = html;
-            
-            // Re-inisialisasi ikon lucide untuk elemen HTML yang baru ditambahkan
             lucide.createIcons();
         }
 

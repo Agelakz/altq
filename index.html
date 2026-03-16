@@ -51,7 +51,7 @@
         <div class="flex-1 overflow-y-auto p-2 md:p-4 bg-[#0B1218]">
             <div id="loading" class="text-center py-10 text-gray-500 flex flex-col items-center">
                 <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3"></i>
-                <span>Menghubungkan ke RapidAPI...</span>
+                <span>Memuat data...</span>
             </div>
             
             <div id="matches-container" class="max-w-4xl mx-auto space-y-4 pb-10"></div>
@@ -97,8 +97,6 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const data = await response.json();
-
-                // Scorehub mungkin mengembalikan data di dalam object tertentu, mari kita asumsikan array langsung atau di dalam properti 'data'/'response'
                 const actualData = data.response || data.data || data;
 
                 localStorage.setItem(cacheKey, JSON.stringify({
@@ -117,14 +115,30 @@
 
         async function loadFixtures() {
             try {
-                const matches = await fetchWithCache('fixtures.php', 'cache_fixtures_today');
+                // Ambil data dari cache atau API
+                let rawData = await fetchWithCache('fixtures.php', 'cache_fixtures_today');
                 document.getElementById('loading').style.display = 'none';
                 
-                // MENGELOMPOKKAN DATA BERDASARKAN NAMA LIGA
-                const groupedMatches = {};
+                // --- PENCARI ARRAY OTOMATIS (SMART PARSER) ---
+                let matches = [];
                 
-                // Pastikan matches adalah array sebelum di-loop
-                if (Array.isArray(matches)) {
+                if (Array.isArray(rawData)) {
+                    matches = rawData; 
+                } else if (rawData && typeof rawData === 'object') {
+                    for (const key in rawData) {
+                        if (Array.isArray(rawData[key])) {
+                            matches = rawData[key];
+                            break;
+                        }
+                    }
+                    if (matches.length === 0 && rawData.match_id) {
+                        matches = [rawData]; 
+                    }
+                }
+
+                // --- PROSES RENDER ---
+                if (matches.length > 0) {
+                    const groupedMatches = {};
                     matches.forEach(match => {
                         const leagueName = match.competition_name || "LIGA LAINNYA";
                         if (!groupedMatches[leagueName]) {
@@ -135,12 +149,24 @@
                     
                     renderGroupedMatches(groupedMatches);
                 } else {
-                    document.getElementById('matches-container').innerHTML = `<div class="text-center text-gray-500 py-10">Format data tidak dikenali.</div>`;
+                    document.getElementById('matches-container').innerHTML = `
+                        <div class="text-left bg-red-900/20 border border-red-500 rounded-lg p-6">
+                            <h3 class="font-bold text-red-500 text-lg mb-2">Data Perlu Di-refresh</h3>
+                            <p class="text-sm text-gray-300 mb-4">Sistem mendeteksi format lama yang tersimpan di memori. Silakan klik tombol di bawah ini untuk membersihkan cache dan mengambil data baru:</p>
+                            <button onclick="localStorage.clear(); location.reload();" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4 transition flex items-center gap-2">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Hapus Cache & Refresh
+                            </button>
+                            <div class="bg-slate-900 p-3 rounded overflow-auto max-h-40">
+                                <pre class="text-xs text-yellow-400 font-mono">${JSON.stringify(rawData, null, 2)}</pre>
+                            </div>
+                        </div>`;
+                    lucide.createIcons();
                 }
 
             } catch (error) {
-                document.getElementById('loading').innerHTML = `
-                    <div class="text-red-500 py-4 text-center">
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('matches-container').innerHTML = `
+                    <div class="text-red-500 py-4 text-center bg-red-900/20 border border-red-500 rounded">
                         Gagal memuat jadwal. Error: ${error.message}
                     </div>`;
             }
@@ -150,9 +176,7 @@
             const container = document.getElementById('matches-container');
             let html = '';
 
-            // Loop melalui setiap grup liga
             for (const [leagueName, matches] of Object.entries(groupedMatches)) {
-                
                 html += `
                 <div class="rounded-lg overflow-hidden border border-[#1E293B]">
                     <div class="bg-[#1A242D] px-4 py-2.5 flex items-center justify-between">
@@ -168,16 +192,13 @@
                     <div class="bg-[#111820]">
                 `;
 
-                // Loop setiap pertandingan dalam liga ini
                 matches.forEach(match => {
-                    // Ambil data dari JSON Scorehub
                     const homeName = match.home_team?.name || "Tim Kandang";
                     const awayName = match.away_team?.name || "Tim Tandang";
                     const homeScore = match.home_team?.goals !== null && match.home_team?.goals !== undefined ? match.home_team.goals : '-';
                     const awayScore = match.away_team?.goals !== null && match.away_team?.goals !== undefined ? match.away_team.goals : '-';
                     const status = match.status || "Scheduled";
                     
-                    // Ekstrak Jam dari start_time (misal: "2026-02-23T06:00:00" -> "06:00")
                     let matchTime = status;
                     if (match.start_time) {
                         const dateObj = new Date(match.start_time);
@@ -186,7 +207,6 @@
                         matchTime = `${hours}:${minutes}`;
                     }
                     
-                    // Jika match sudah selesai atau sedang live, tampilkan statusnya, jika belum, tampilkan jamnya
                     const displayStatus = (status === 'Ended' || status === 'Finished') ? 'FT' : (status === 'Live' ? 'LIVE' : matchTime);
                     const timeClass = (status === 'Live' || status === 'In Progress') ? 'text-red-500 animate-pulse font-bold' : 'text-gray-500';
 

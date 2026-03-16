@@ -38,8 +38,7 @@
                     <i data-lucide="dribbble" class="w-5 h-5"></i> FOOTBALL
                 </button>
             </nav>
-            <div id="cache-status" class="text-xs font-mono text-gray-500 flex items-center gap-2">
-                </div>
+            <div id="cache-status" class="text-xs font-mono text-gray-500 flex items-center gap-2"></div>
         </header>
 
         <div class="bg-[#0B1218] p-4 flex gap-2 border-b border-[#1E293B] overflow-x-auto">
@@ -55,8 +54,6 @@
                 <span>Menghubungkan ke RapidAPI...</span>
             </div>
             
-            <div id="debug-container" class="hidden max-w-4xl mx-auto bg-slate-900 border border-slate-700 p-4 rounded-lg overflow-x-auto text-xs font-mono text-green-400"></div>
-
             <div id="matches-container" class="max-w-4xl mx-auto space-y-4 pb-10"></div>
         </div>
     </main>
@@ -67,11 +64,8 @@
         // KONFIGURASI RAPIDAPI
         const API_HOST = 'scorehub-football-live-scores-api.p.rapidapi.com';
         const API_KEY = 'aa90a97566msh0596dc8fd7c0d9ep13f42bjsna912b1c6ca9d';
-        
-        // KONFIGURASI CACHE (30 Menit)
         const CACHE_DURATION_MS = 30 * 60 * 1000; 
 
-        // Fungsi Inti: Fetch dengan Cache localStorage
         async function fetchWithCache(endpoint, cacheKey) {
             const url = `https://${API_HOST}/v1/${endpoint}`;
             const cachedData = localStorage.getItem(cacheKey);
@@ -81,18 +75,14 @@
                 const parsedData = JSON.parse(cachedData);
                 const timePassed = new Date().getTime() - parsedData.timestamp;
 
-                // Jika umur cache masih di bawah 30 menit (CACHE_DURATION_MS)
                 if (timePassed < CACHE_DURATION_MS) {
                     const minutesLeft = Math.ceil((CACHE_DURATION_MS - timePassed) / 60000);
-                    cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Cached (Reset dalam ${minutesLeft}m)`;
-                    console.log(`[CACHE HIT] Mengambil dari penyimpanan lokal: ${cacheKey}`);
-                    return parsedData.data; // Kembalikan data dari cache
+                    cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Cached (${minutesLeft}m left)`;
+                    return parsedData.data; 
                 }
             }
 
-            // Jika tidak ada cache, atau cache sudah kedaluwarsa, ambil dari API
             cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-500 animate-ping"></span> Fetching API...`;
-            console.log(`[API FETCH] Meminta data baru dari RapidAPI: ${endpoint}`);
 
             try {
                 const response = await fetch(url, {
@@ -108,57 +98,141 @@
                 
                 const data = await response.json();
 
-                // Simpan hasil fetch ke localStorage beserta waktu (timestamp) saat ini
+                // Scorehub mungkin mengembalikan data di dalam object tertentu, mari kita asumsikan array langsung atau di dalam properti 'data'/'response'
+                const actualData = data.response || data.data || data;
+
                 localStorage.setItem(cacheKey, JSON.stringify({
                     timestamp: new Date().getTime(),
-                    data: data
+                    data: actualData
                 }));
 
                 cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Cache Updated`;
-                return data;
+                return actualData;
 
             } catch (error) {
                 cacheStatusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> API Error`;
-                console.error("Gagal mengambil data dari API:", error);
                 throw error;
             }
         }
 
-        // FUNGSI UTAMA UNTUK MENGAMBIL JADWAL
-        async function initDashboard() {
+        async function loadFixtures() {
             try {
-                // Memanggil endpoint fixtures dengan cache key 'cache_fixtures_today'
-                const fixturesData = await fetchWithCache('fixtures.php', 'cache_fixtures_today');
-                
+                const matches = await fetchWithCache('fixtures.php', 'cache_fixtures_today');
                 document.getElementById('loading').style.display = 'none';
                 
-                // MENGANALISIS STRUKTUR DATA (Karena API ganti)
-                const debugContainer = document.getElementById('debug-container');
-                debugContainer.classList.remove('hidden');
+                // MENGELOMPOKKAN DATA BERDASARKAN NAMA LIGA
+                const groupedMatches = {};
                 
-                // Menampilkan sedikit cuplikan JSON mentah agar kita tahu cara merendernya
-                debugContainer.innerText = "// STRUKTUR JSON SCOREHUB API (Contoh 1 Item):\n\n" + 
-                                          JSON.stringify(fixturesData[0] || fixturesData.data?.[0] || fixturesData, null, 2);
-                
-                document.getElementById('matches-container').innerHTML = `
-                    <div class="p-6 bg-blue-900/20 border border-blue-500 rounded-lg text-blue-200">
-                        <h3 class="font-bold text-lg mb-2">Berhasil Terhubung! 🚀</h3>
-                        <p class="text-sm mb-4">Sistem Cache 30 Menit sudah aktif. Kuota Anda aman meski di-refresh berkali-kali.</p>
-                        <p class="text-sm">Lihat kotak struktur JSON di atas. Karena kita berganti dari SportSRC ke Scorehub, nama variabel (seperti homeTeam, leagueName, skor, dll) di dalam JSON pasti berbeda.</p>
-                    </div>`;
+                // Pastikan matches adalah array sebelum di-loop
+                if (Array.isArray(matches)) {
+                    matches.forEach(match => {
+                        const leagueName = match.competition_name || "LIGA LAINNYA";
+                        if (!groupedMatches[leagueName]) {
+                            groupedMatches[leagueName] = [];
+                        }
+                        groupedMatches[leagueName].push(match);
+                    });
+                    
+                    renderGroupedMatches(groupedMatches);
+                } else {
+                    document.getElementById('matches-container').innerHTML = `<div class="text-center text-gray-500 py-10">Format data tidak dikenali.</div>`;
+                }
 
             } catch (error) {
                 document.getElementById('loading').innerHTML = `
-                    <div class="text-red-500 py-4 bg-red-900/20 border border-red-500 rounded text-center w-full">
-                        Gagal memuat jadwal. Pastikan API Key RapidAPI Anda benar.<br>
-                        Error: ${error.message}
+                    <div class="text-red-500 py-4 text-center">
+                        Gagal memuat jadwal. Error: ${error.message}
                     </div>`;
             }
         }
 
-        // Jalankan saat aplikasi dibuka
-        initDashboard();
+        function renderGroupedMatches(groupedMatches) {
+            const container = document.getElementById('matches-container');
+            let html = '';
 
+            // Loop melalui setiap grup liga
+            for (const [leagueName, matches] of Object.entries(groupedMatches)) {
+                
+                html += `
+                <div class="rounded-lg overflow-hidden border border-[#1E293B]">
+                    <div class="bg-[#1A242D] px-4 py-2.5 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="star" class="w-4 h-4 text-gray-500 hover:text-yellow-500 cursor-pointer transition"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">${leagueName}</span>
+                        </div>
+                        <a href="#" class="text-xs font-medium text-gray-400 hover:text-white flex items-center transition">
+                            Standings <i data-lucide="chevron-up" class="w-4 h-4 ml-1"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="bg-[#111820]">
+                `;
+
+                // Loop setiap pertandingan dalam liga ini
+                matches.forEach(match => {
+                    // Ambil data dari JSON Scorehub
+                    const homeName = match.home_team?.name || "Tim Kandang";
+                    const awayName = match.away_team?.name || "Tim Tandang";
+                    const homeScore = match.home_team?.goals !== null && match.home_team?.goals !== undefined ? match.home_team.goals : '-';
+                    const awayScore = match.away_team?.goals !== null && match.away_team?.goals !== undefined ? match.away_team.goals : '-';
+                    const status = match.status || "Scheduled";
+                    
+                    // Ekstrak Jam dari start_time (misal: "2026-02-23T06:00:00" -> "06:00")
+                    let matchTime = status;
+                    if (match.start_time) {
+                        const dateObj = new Date(match.start_time);
+                        const hours = dateObj.getHours().toString().padStart(2, '0');
+                        const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+                        matchTime = `${hours}:${minutes}`;
+                    }
+                    
+                    // Jika match sudah selesai atau sedang live, tampilkan statusnya, jika belum, tampilkan jamnya
+                    const displayStatus = (status === 'Ended' || status === 'Finished') ? 'FT' : (status === 'Live' ? 'LIVE' : matchTime);
+                    const timeClass = (status === 'Live' || status === 'In Progress') ? 'text-red-500 animate-pulse font-bold' : 'text-gray-500';
+
+                    html += `
+                        <div class="flex px-4 py-2 border-b border-[#1A242D] hover:bg-[#1A242D]/70 transition cursor-pointer group">
+                            <div class="w-8 flex items-center justify-center">
+                                <i data-lucide="star" class="w-4 h-4 text-[#2A3540] group-hover:text-gray-400 transition"></i>
+                            </div>
+                            
+                            <div class="w-20 flex items-center text-xs ${timeClass}">
+                                ${displayStatus}
+                            </div>
+                            
+                            <div class="flex-1 flex flex-col gap-1.5 border-l border-[#1A242D] pl-4">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-4 h-4 bg-slate-700 rounded-full flex items-center justify-center text-[8px] text-white overflow-hidden">
+                                            ${homeName.substring(0,2).toUpperCase()}
+                                        </div>
+                                        <span class="text-sm text-gray-200 ${homeScore > awayScore ? 'font-bold text-white' : ''}">${homeName}</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-white w-6 text-center">${homeScore}</span>
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-4 h-4 bg-slate-700 rounded-full flex items-center justify-center text-[8px] text-white overflow-hidden">
+                                            ${awayName.substring(0,2).toUpperCase()}
+                                        </div>
+                                        <span class="text-sm text-gray-200 ${awayScore > homeScore ? 'font-bold text-white' : ''}">${awayName}</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-white w-6 text-center">${awayScore}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        loadFixtures();
     </script>
 </body>
 </html>
